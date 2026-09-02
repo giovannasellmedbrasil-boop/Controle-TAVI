@@ -339,6 +339,7 @@
     <p>Venus A Pro &middot; Sellmed Brasil</p>
   </div>
   <div class="spacer"></div>
+  <span class="count-pill" id="syncStatus" style="margin-right:4px;">Carregando…</span>
   <button class="btn btn-primary" id="btnNovo">+ Novo Procedimento</button>
 </header>
 
@@ -392,7 +393,7 @@
     </div>
   </section>
 
-  <footer class="appfoot">Controle TAVI &middot; Sellmed Brasil &middot; dados salvos localmente neste navegador</footer>
+  <footer class="appfoot">Controle TAVI &middot; Sellmed Brasil &middot; dados sincronizados via Supabase</footer>
 </main>
 
 <!-- Modal -->
@@ -492,11 +493,17 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 (function(){
   "use strict";
 
-  var LS_KEY = 'tavi_procedimentos_v1';
+  var SUPABASE_URL = 'https://rrpxgusloxqlrdxerpgi.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycHhndXNsb3hxbHJkeGVycGdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzOTIxMTMsImV4cCI6MjEwMzk2ODExM30.cFnFOHFFiw-Hh3T3XFjXdy5trGvVHQQMUpI5uYT61Hg';
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var ANEXOS_BUCKET = 'tavi-anexos';
+  var CACHE_KEY = 'tavi_procedimentos_cache_v1';
+
   var STATUS_LIST = ['Realizado','Agendado','Cancelado','Óbito','Aguardando agendamento'];
   var STATUS_CLASS = {
     'Realizado':'badge-realizado','Agendado':'badge-agendado','Cancelado':'badge-cancelado',
@@ -515,141 +522,86 @@
     PR:'Sul',RS:'Sul',SC:'Sul'
   };
 
-  /* ---------- IndexedDB attachment storage ---------- */
-  var dbPromise = null;
-  function openDB(){
-    if(dbPromise) return dbPromise;
-    dbPromise = new Promise(function(resolve,reject){
-      if(!window.indexedDB){ reject('no-idb'); return; }
-      var req = indexedDB.open('tavi_anexos_db', 1);
-      req.onupgradeneeded = function(e){
-        e.target.result.createObjectStore('anexos', {keyPath:'id'});
-      };
-      req.onsuccess = function(e){ resolve(e.target.result); };
-      req.onerror = function(){ reject(req.error); };
-    });
-    return dbPromise;
-  }
-  function saveAttachmentFile(file){
-    return new Promise(function(resolve,reject){
-      if(!file){ resolve(null); return; }
-      var id = 'a_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-      openDB().then(function(db){
-        var tx = db.transaction('anexos','readwrite');
-        tx.objectStore('anexos').put({id:id, name:file.name, type:file.type, blob:file});
-        tx.oncomplete = function(){ resolve({id:id, name:file.name, type:file.type}); };
-        tx.onerror = function(){ reject(tx.error); };
-      }).catch(reject);
+  /* ---------- Supabase Storage (anexos) ---------- */
+  function saveAttachmentFile(file, procedimentoId, kind){
+    if(!file) return Promise.resolve(null);
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path = procedimentoId+'/'+kind+'-'+Date.now()+'-'+safeName;
+    return sb.storage.from(ANEXOS_BUCKET).upload(path, file, {upsert:true}).then(function(res){
+      if(res.error) throw res.error;
+      return {path:path, name:file.name};
     });
   }
-  function getAttachmentURL(id){
-    return new Promise(function(resolve,reject){
-      openDB().then(function(db){
-        var tx = db.transaction('anexos','readonly');
-        var req = tx.objectStore('anexos').get(id);
-        req.onsuccess = function(){
-          if(req.result && req.result.blob){
-            resolve(URL.createObjectURL(req.result.blob));
-          } else { resolve(null); }
-        };
-        req.onerror = function(){ reject(req.error); };
-      }).catch(reject);
-    });
+  function getAttachmentURL(path){
+    var res = sb.storage.from(ANEXOS_BUCKET).getPublicUrl(path);
+    return res.data ? res.data.publicUrl : null;
   }
-  function deleteAttachment(id){
-    if(!id) return;
-    openDB().then(function(db){
-      var tx = db.transaction('anexos','readwrite');
-      tx.objectStore('anexos').delete(id);
-    }).catch(function(){});
+  function deleteAttachment(path){
+    if(!path) return;
+    sb.storage.from(ANEXOS_BUCKET).remove([path]);
   }
 
-  /* ---------- Data ---------- */
-  function loadData(){
-    var raw = localStorage.getItem(LS_KEY);
-    if(raw){
-      try{ return JSON.parse(raw); }catch(e){ /* fall through to seed */ }
-    }
-    var seed = seedData();
-    localStorage.setItem(LS_KEY, JSON.stringify(seed));
-    return seed;
-  }
-  function saveData(){
-    localStorage.setItem(LS_KEY, JSON.stringify(procedimentos));
-  }
-
-  function rec(paciente,cidade,uf,hospital,medico,data,status,protese,responsavel,crimper){
+  /* ---------- Data mapping (DB snake_case <-> JS camelCase) ---------- */
+  function rowToRecord(row){
     return {
-      id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
-      paciente:paciente, cidade:cidade||'', uf:uf||'', regiao: uf?(UF_REGIAO[uf]||''):'',
-      hospital:hospital||'', medico:medico||'', data:data||'', status:status||'Aguardando agendamento',
-      protese:protese||'', responsavel:responsavel||'', crimper:crimper||'',
-      anexoReporte:null, anexoNF:null, criadoEm:new Date().toISOString()
+      id: row.id,
+      paciente: row.paciente || '',
+      cidade: row.cidade || '',
+      uf: row.uf || '',
+      regiao: row.regiao || '',
+      hospital: row.hospital || '',
+      medico: row.medico || '',
+      data: row.data || '',
+      status: row.status || 'Aguardando agendamento',
+      protese: row.protese || '',
+      responsavel: row.responsavel || '',
+      crimper: row.crimper || '',
+      anexoReporte: row.anexo_reporte_path ? {path:row.anexo_reporte_path, name:row.anexo_reporte_nome} : null,
+      anexoNF: row.anexo_nf_path ? {path:row.anexo_nf_path, name:row.anexo_nf_nome} : null,
+      criadoEm: row.criado_em
+    };
+  }
+  function recordToFields(p){
+    return {
+      paciente: p.paciente, cidade: p.cidade, uf: p.uf, regiao: p.regiao,
+      hospital: p.hospital, medico: p.medico, data: p.data || null, status: p.status,
+      protese: p.protese, responsavel: p.responsavel, crimper: p.crimper,
+      atualizado_em: new Date().toISOString()
     };
   }
 
-  function seedData(){
-    var d = [];
-    d.push(rec('Jonas Freitas','Ji-Paraná','RO','HCR','Dr Francisco','2026-05-06','Realizado','29 ou 32','Eudes','Alice'));
-    d.push(rec('Yolanda Gomes','Ji-Paraná','RO','HCR','Dr Francisco','2026-05-06','Realizado','26 ou 23','Eudes','Alice'));
-    d.push(rec('Eduarda Pinto','Manaus','AM','Hapvida','Dr Anderson','2026-05-12','Realizado','26','Alice','Alice'));
-    d.push(rec('Manoel Braga','Manaus','AM','Hapvida','Dr Anderson','2026-05-12','Realizado','29','Alice','Alice'));
-    d.push(rec('Maria Aparecida Nunes','Ji-Paraná','RO','HCR','Dr Francisco','','Cancelado','','Eudes',''));
-    d.push(rec('Marili Bezerra','Maceió','AL','Hapvida','Dr Kleberth','2026-03-10','Realizado','26','',''));
-    d.push(rec('Valter Ferreira','Ribeirão Preto','SP','Hapvida','Dr Leon','2026-04-22','Realizado','29','',''));
-    d.push(rec('Florenilda Barbosa','Maceió','AL','Hapvida','Dr Kleberth','2026-06-08','Realizado','23 ou 26','Alice','Alice'));
-    d.push(rec('Julia Cosmos dos Santos','Aracaju','SE','SUS','Dr André','2026-06-12','Realizado','26 ou 23','Alice','Alice'));
-    d.push(rec('Edgio Teixeira Leal','Recife','PE','Osvaldo Magalhães','Dr Dinaldo','2026-06-15','Realizado','','Eudes/Carol','Alice'));
-    d.push(rec('Melicia do Carmo','Recife','PE','Agnaldo Magalhães','Dr Fabiano','2026-06-17','Realizado','32 ou 29','Eudes/Carol','Alice'));
-    d.push(rec('Revolucia Bezarra da Rocha','Aracaju','SE','HUSE','Dr Thiago','2026-07-17','Realizado','23 ou 26','Alice','Alice'));
-    d.push(rec('Raymundo Ribeiro França','Salvador','BA','Hapvida','Dr Neri','2026-08-27','Realizado','26 ou 29','Alice','Alice'));
-    d.push(rec('Jose Pereira','Aracaju','SE','AngioCor','Dr Allysson','2026-12-19','Realizado','29 ou 26','Alice','Alice'));
-    d.push(rec('Herminio Hilario de Araujo','Fortaleza','CE','Antonio Prudentre - Hapvida','Dr Milanez','2027-07-02','Realizado','32','Alice/Eudes','Alice'));
-    d.push(rec('Almir Gomes Rosendo','Natal','RN','Hospital do Coração','Dr Bruno','2026-08-31','Cancelado','32 ou 29','MedPrime',''));
-    d.push(rec('Ana Maria','Fortaleza','CE','Hapvida','Dr Hedilberto','','Aguardando agendamento','26 ou 29','Eudes',''));
-    d.push(rec('Evanilda Alves Rocha','Recife','PE','Esperança','Dr Alexandre Magni','','Cancelado','','Alice',''));
-    d.push(rec('Jose Florencio Lira','Recife','PE','','Dr Heitor Medeiros','','Aguardando agendamento','26 ou 29','Eudes',''));
-    d.push(rec('Jose Oderno de Oliveira','Fortaleza','CE','Antonio Prudentre - Hapvida','Dr Milanez','','Aguardando agendamento','26 ou 23','Alice',''));
-    d.push(rec('Maria da Penha','Recife','PE','Hapvida','Dr Fabiano','','Aguardando agendamento','23 ou 26','Eudes/Carol','Alice'));
-    d.push(rec('Maria da Conceição','Aracaju','SE','Hapvida','Dr Thiago','','Aguardando agendamento','','Alice','Alice'));
-    d.push(rec('Maria Edite Almeida','Recife','PE','Hapvida','Dr Fabiano','','Aguardando agendamento','29 ou 26','Eudes/Carol','Alice'));
-    d.push(rec('Maria Aparecida Viana','Mato Grosso do Sul','MS','HCI','Dr Atabi','2026-07-14','Realizado','26 ou 29','Dani','Alice'));
-    d.push(rec('José Alves Assis','São Paulo','SP','Paulo Sacramento','Dr Adriano','2026-05-19','Realizado','32 ou 29','Andreia/Ari','Alice'));
-    d.push(rec('Natalina Benenuto','Ribeirão Preto','SP','Hapvida','Dr Leon','2026-06-23','Cancelado','','Alice',''));
-    d.push(rec('Felipe Pascolim','Jundiaí','SP','Paulo Sacramento','Dr Adriano','2026-07-02','Realizado','32 ou 29','Ari/Andreia','Stephanie'));
-    d.push(rec('Alberto Monteiro','São Paulo','SP','Salvalos','Dr Adriano Truffa','2026-07-07','Realizado','29 ou 32','Andreia','Alice'));
-    d.push(rec('Pedro Pistori Filho','São Paulo','SP','Hapvida','Dr Adriano','2026-07-08','Realizado','26 ou 23','Andreia',''));
-    d.push(rec('Maria Aparecida Viana','São Paulo','SP','Hospital Vida','Dr Atabi','2026-07-14','Cancelado','29 ou 26','Dani','Alice'));
-    d.push(rec('Vicentina Aparecida','Jundiaí','SP','Paulo Sacramento','Dr Tarcio','2026-07-20','Cancelado','26 ou 23','Ari/Andreia',''));
-    d.push(rec('Braz Mendes','Jundiaí','SP','Paulo Sacramento','Dr Adriano','2026-07-21','Realizado','29 ou 32','Andreia/Ari','Stephanie'));
-    d.push(rec('Luzia Montanha','São Paulo','SP','São Bernardo','Dr Adriano','2026-07-21','Realizado','23','Andreia',''));
-    d.push(rec('Ivan Scotto','São Bernardo','SP','São Bernardo','Dr Adriano','2026-08-10','Realizado','29 ou 26','Andreia',''));
-    d.push(rec('Alzira Alberti Gorgonio','São Paulo','SP','Hospital Vida','Dr Lucas','','Cancelado','26 ou 29','Dani',''));
-    d.push(rec('Baltazar Prado','Ribeirão Preto','SP','HCI','Daniele Lopes','','Aguardando agendamento','26 ou 29','Dani',''));
-    d.push(rec('Carmem Lucia Fernandes','São Bernardo','SP','São Bernardo','Dr Adriano','','Realizado','26 ou 23','Andreia',''));
-    d.push(rec('Eliz Miziara','Barretos','SP','São Jorge','Dr Uebe','','Cancelado','','Dani',''));
-    d.push(rec('Elza Aparecida Melo','Marilia','SP','Unimar','Dr Ricardo','','Aguardando agendamento','26','Dani',''));
-    d.push(rec('Evaristo de Souza','Ribeirão Preto','SP','HCI','Dr Ricardo','','Aguardando agendamento','26 ou 29','Dani',''));
-    d.push(rec('Iracilda Alves Pereira','Bauru','SP','Unimed Bauru','Daniele','','Aguardando agendamento','','Dani',''));
-    d.push(rec('Marcio Luiz Alarcon','Bauru','SP','Unimed Bauru','Dr Antonio Germano','','Aguardando agendamento','','Dani',''));
-    d.push(rec('Marcio Rossi','Ribeirão Preto','SP','HCI','Ricardo Ferreira','','Aguardando agendamento','29 ou 26','Dani',''));
-    d.push(rec('Maria Aparecida Grilo','Ribeirão Preto','SP','HCI','Jose Luiz','','Aguardando agendamento','23','Dani',''));
-    d.push(rec('Maria Auxiliadora','São Paulo','SP','Salvalos','Dr Adriano','','Cancelado','26 ou 23','Andreia',''));
-    d.push(rec('Maria de Lourdes de Oliveira','','SP','Paulo Sacramento','Dr Adriano Truffa','','Aguardando agendamento','26 e 23','Andreia',''));
-    d.push(rec('Maria Socorro da Silva','Santos','SP','Ana Costa','Leonardo Barros','','Aguardando agendamento','','Dani',''));
-    d.push(rec('Miriam Vannuci','São Paulo','SP','','','','Aguardando agendamento','','Dani',''));
-    d.push(rec('Paulo Roberto Meira Leite','Bauru','SP','Unimed Bauru','Dr Luiz Roberto','','Cancelado','29 ou 32','Dani',''));
-    d.push(rec('Ricardo Tonso','São Paulo','SP','Hospital Vida','Dr Lucas','','Cancelado','29 ou 26','Dani',''));
-    d.push(rec('Valdir Dionisio Ribeiro','Ribeirão Preto','SP','Hapvida','Dr Leon','','Realizado','','',''));
-    d.push(rec('Virginia de Camargo Absy','São Paulo','SP','Salvalos','Dr Giovani','','Realizado','23 ou 26','Andreia','Alice e Ari'));
-    d.push(rec('William Sancini','São Paulo','SP','Hapvida','Dr Marcelo','','Cancelado','','Alice/Andreia',''));
-    d.push(rec('Arthur Antonio','Guarapuava','PR','Cancer Center','Dr Stefan Negrão','2026-07-04','Realizado','32','Dani','Alice'));
-    d.push(rec('Neuza Aparecida Antonio','São Paulo','SP','Bauru','Dr Antonio Germano','','Aguardando agendamento','','',''));
-    d.push(rec('Maria Valdenice','São Paulo','SP','Matao','Dr Said','','Aguardando agendamento','','',''));
-    return d;
+  /* ---------- Data (Supabase, com cache local para modo offline) ---------- */
+  var procedimentos = [];
+
+  function setSyncStatus(text){
+    var el = $('syncStatus');
+    if(el) el.textContent = text;
   }
 
-  var procedimentos = loadData();
+  function loadFromCache(){
+    var raw = localStorage.getItem(CACHE_KEY);
+    if(!raw) return [];
+    try{ return JSON.parse(raw); }catch(e){ return []; }
+  }
+  function saveToCache(){
+    localStorage.setItem(CACHE_KEY, JSON.stringify(procedimentos));
+  }
+
+  function fetchAll(){
+    setSyncStatus('Sincronizando…');
+    return sb.from('procedimentos').select('*').order('criado_em', {ascending:true}).then(function(res){
+      if(res.error) throw res.error;
+      procedimentos = res.data.map(rowToRecord);
+      saveToCache();
+      setSyncStatus('Sincronizado');
+      return procedimentos;
+    }).catch(function(err){
+      console.error(err);
+      procedimentos = loadFromCache();
+      setSyncStatus('Sem conexão — mostrando cópia local');
+      return procedimentos;
+    });
+  }
 
   /* ---------- helpers ---------- */
   function $(id){ return document.getElementById(id); }
@@ -862,9 +814,8 @@
     link.href = '#'; link.textContent = '📎 '+att.name;
     link.addEventListener('click', function(ev){
       ev.preventDefault();
-      getAttachmentURL(att.id).then(function(url){
-        if(url) window.open(url,'_blank'); else toast('Não foi possível abrir o anexo.');
-      });
+      var url = getAttachmentURL(att.path);
+      if(url) window.open(url,'_blank'); else toast('Não foi possível abrir o anexo.');
     });
     var rm = document.createElement('button');
     rm.type='button'; rm.className='remove-link'; rm.textContent='remover';
@@ -895,20 +846,28 @@
       $('f_crimper').value = p.crimper;
 
       renderCurrentAttachment('cur_reporte', p.anexoReporte, function(){
-        deleteAttachment(p.anexoReporte.id);
-        p.anexoReporte = null;
-        saveData();
-        renderCurrentAttachment('cur_reporte', null);
-        renderTable();
-        toast('Anexo de reporte removido.');
+        var oldPath = p.anexoReporte.path;
+        sb.from('procedimentos').update({anexo_reporte_path:null, anexo_reporte_nome:null}).eq('id', p.id).then(function(res){
+          if(res.error){ toast('Não foi possível remover o anexo.'); return; }
+          deleteAttachment(oldPath);
+          p.anexoReporte = null;
+          saveToCache();
+          renderCurrentAttachment('cur_reporte', null);
+          renderTable();
+          toast('Anexo de reporte removido.');
+        });
       });
       renderCurrentAttachment('cur_nf', p.anexoNF, function(){
-        deleteAttachment(p.anexoNF.id);
-        p.anexoNF = null;
-        saveData();
-        renderCurrentAttachment('cur_nf', null);
-        renderTable();
-        toast('Anexo de nota fiscal removido.');
+        var oldPath = p.anexoNF.path;
+        sb.from('procedimentos').update({anexo_nf_path:null, anexo_nf_nome:null}).eq('id', p.id).then(function(res){
+          if(res.error){ toast('Não foi possível remover o anexo.'); return; }
+          deleteAttachment(oldPath);
+          p.anexoNF = null;
+          saveToCache();
+          renderCurrentAttachment('cur_nf', null);
+          renderTable();
+          toast('Anexo de nota fiscal removido.');
+        });
       });
     } else {
       $('modalTitle').textContent = 'Novo Procedimento';
@@ -931,51 +890,63 @@
 
     var id = $('f_id').value;
     var isNew = !id;
-    var p = isNew ? rec('') : procedimentos.find(function(x){ return x.id===id; });
-    if(!p){ closeModal(); return; }
+    var existing = isNew ? null : procedimentos.find(function(x){ return x.id===id; });
+    if(!isNew && !existing){ closeModal(); return; }
 
-    p.paciente = paciente;
-    p.cidade = $('f_cidade').value.trim();
-    p.uf = $('f_uf').value;
-    p.regiao = $('f_regiao').value;
-    p.hospital = $('f_hospital').value.trim();
-    p.medico = $('f_medico').value.trim();
-    p.data = $('f_data').value;
-    p.status = $('f_status').value;
-    p.protese = $('f_protese').value.trim();
-    p.responsavel = $('f_responsavel').value.trim();
-    p.crimper = $('f_crimper').value.trim();
+    var fields = recordToFields({
+      paciente: paciente,
+      cidade: $('f_cidade').value.trim(),
+      uf: $('f_uf').value,
+      regiao: $('f_regiao').value,
+      hospital: $('f_hospital').value.trim(),
+      medico: $('f_medico').value.trim(),
+      data: $('f_data').value,
+      status: $('f_status').value,
+      protese: $('f_protese').value.trim(),
+      responsavel: $('f_responsavel').value.trim(),
+      crimper: $('f_crimper').value.trim()
+    });
 
     var repFile = $('f_reporte').files[0];
     var nfFile = $('f_nf').files[0];
 
-    var jobs = [];
-    if(repFile){
-      jobs.push(saveAttachmentFile(repFile).then(function(att){
-        if(p.anexoReporte) deleteAttachment(p.anexoReporte.id);
-        p.anexoReporte = att;
-      }));
-    }
-    if(nfFile){
-      jobs.push(saveAttachmentFile(nfFile).then(function(att){
-        if(p.anexoNF) deleteAttachment(p.anexoNF.id);
-        p.anexoNF = att;
-      }));
-    }
+    $('btnSave').disabled = true;
+    setSyncStatus('Salvando…');
 
-    Promise.all(jobs).then(function(){
-      if(isNew) procedimentos.push(p);
-      saveData();
+    var savePromise = isNew
+      ? sb.from('procedimentos').insert(fields).select().single()
+      : sb.from('procedimentos').update(fields).eq('id', id).select().single();
+
+    savePromise.then(function(res){
+      if(res.error) throw res.error;
+      var row = res.data;
+      var recId = row.id;
+
+      var attachJobs = [];
+      if(repFile){
+        attachJobs.push(saveAttachmentFile(repFile, recId, 'reporte').then(function(att){
+          if(existing && existing.anexoReporte) deleteAttachment(existing.anexoReporte.path);
+          return sb.from('procedimentos').update({anexo_reporte_path:att.path, anexo_reporte_nome:att.name}).eq('id', recId);
+        }));
+      }
+      if(nfFile){
+        attachJobs.push(saveAttachmentFile(nfFile, recId, 'nf').then(function(att){
+          if(existing && existing.anexoNF) deleteAttachment(existing.anexoNF.path);
+          return sb.from('procedimentos').update({anexo_nf_path:att.path, anexo_nf_nome:att.name}).eq('id', recId);
+        }));
+      }
+      return Promise.all(attachJobs);
+    }).then(function(){
+      return fetchAll();
+    }).then(function(){
       renderTable();
       closeModal();
       toast(isNew ? 'Procedimento adicionado.' : 'Procedimento atualizado.');
     }).catch(function(err){
       console.error(err);
-      toast('Não foi possível salvar o anexo neste navegador.');
-      if(isNew) procedimentos.push(p);
-      saveData();
-      renderTable();
-      closeModal();
+      toast('Não foi possível salvar — verifique sua conexão com a internet.');
+    }).finally(function(){
+      $('btnSave').disabled = false;
     });
   }
 
@@ -984,13 +955,21 @@
     var p = procedimentos.find(function(x){ return x.id===currentEditId; });
     if(!p) return;
     if(!confirm('Excluir o procedimento de "'+p.paciente+'"? Esta ação não pode ser desfeita.')) return;
-    if(p.anexoReporte) deleteAttachment(p.anexoReporte.id);
-    if(p.anexoNF) deleteAttachment(p.anexoNF.id);
-    procedimentos = procedimentos.filter(function(x){ return x.id!==currentEditId; });
-    saveData();
-    renderTable();
-    closeModal();
-    toast('Procedimento excluído.');
+    setSyncStatus('Excluindo…');
+    sb.from('procedimentos').delete().eq('id', currentEditId).then(function(res){
+      if(res.error) throw res.error;
+      if(p.anexoReporte) deleteAttachment(p.anexoReporte.path);
+      if(p.anexoNF) deleteAttachment(p.anexoNF.path);
+      return fetchAll();
+    }).then(function(){
+      renderTable();
+      closeModal();
+      toast('Procedimento excluído.');
+    }).catch(function(err){
+      console.error(err);
+      toast('Não foi possível excluir — verifique sua conexão com a internet.');
+      setSyncStatus('Sincronizado');
+    });
   }
 
   /* ---------- events ---------- */
@@ -1009,8 +988,10 @@
   });
 
   /* ---------- init ---------- */
-  renderTable();
-  refreshDatalists();
+  fetchAll().then(function(){
+    renderTable();
+    refreshDatalists();
+  });
 
 })();
 </script>

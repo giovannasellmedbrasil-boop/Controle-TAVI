@@ -1,10 +1,10 @@
 # Controle TAVI — Sellmed Brasil
 
-App estático (um único `index.html`, sem servidor, sem build) para controle dos procedimentos TAVI (Venus A Pro), na identidade visual da Sellmed. Este projeto **não está publicado em lugar nenhum** — é só para uso local, no seu computador.
+App estático (um único `index.html`, sem servidor, sem build) para controle dos procedimentos TAVI (Venus A Pro), na identidade visual da Sellmed. O app em si **não está publicado em lugar nenhum** — continua sendo só um arquivo local, aberto direto no navegador. Os dados e anexos, porém, ficam sincronizados na nuvem via Supabase, então qualquer pessoa que abrir este mesmo arquivo (em qualquer computador) vê a mesma base, atualizada.
 
 ## Como abrir
 
-Dê duplo clique em `index.html` (abre no navegador padrão) ou arraste o arquivo para o Chrome/Firefox.
+Dê duplo clique em `index.html` (abre no navegador padrão) ou arraste o arquivo para o Chrome/Firefox. Precisa de internet para carregar e salvar os dados.
 
 ## O que o app faz
 
@@ -17,17 +17,15 @@ Dê duplo clique em `index.html` (abre no navegador padrão) ou arraste o arquiv
 
 ## Onde os dados ficam salvos
 
-Tudo é gravado **no navegador deste computador**:
+- Os dados dos procedimentos ficam numa tabela (`procedimentos`) no Supabase — banco na nuvem, projeto `sellmed-controle-tavi` (ref `rrpxgusloxqlrdxerpgi`).
+- Os arquivos anexados (reporte e nota fiscal) ficam num bucket do Supabase Storage (`tavi-anexos`).
+- Cada navegador também guarda uma cópia local (cache no `localStorage`) da última lista carregada, então se a internet cair o app continua mostrando os dados — mas não é possível criar/editar/excluir offline; volte a ter internet para salvar.
+- O indicador no canto superior direito do cabeçalho mostra "Sincronizado", "Sincronizando…" ou "Sem conexão — mostrando cópia local".
+- Não há login: qualquer pessoa com o arquivo `index.html` (e internet) lê e edita os dados. Para uso interno da equipe isso é aceitável, mas evite compartilhar o arquivo fora da empresa.
 
-- Os dados dos procedimentos ficam no `localStorage`.
-- Os arquivos anexados (reporte e nota fiscal) ficam no `IndexedDB` do navegador, para suportar PDFs/imagens sem esbarrar no limite pequeno do `localStorage`.
+**Importante sobre segurança:** o app usa a chave pública **anon** do Supabase (segura para expor num app cliente — o acesso é controlado por Row Level Security no banco). A senha do banco de dados (connection string `postgresql://...`) **não está em nenhum arquivo deste projeto** e não deve ser adicionada aqui.
 
-Isso significa:
-
-- Não há sincronização entre aparelhos — se abrir em outro computador ou em outro navegador, os dados não aparecem lá (é uma cópia nova, com a base original de 56 casos).
-- Se limpar o cache/dados de navegação do navegador, os procedimentos e anexos incluídos são perdidos. Evite usar o modo anônimo/privado para uso contínuo.
-- Recomendado: sempre usar o mesmo navegador (Chrome ou Firefox, de preferência) como "principal" para este app.
-- Se quiser publicar depois (link acessível de qualquer aparelho, com sincronização), me avise — dá para reaproveitar este mesmo layout e adicionar um backend, como foi feito no app de Controle de Pagamentos.
+Se no futuro quiser adicionar login (usuário/senha) ou sincronização em tempo real entre pessoas editando ao mesmo tempo, dá para evoluir isso — hoje, como no app de Controle de Pagamentos, quem salvar por último sobrescreve os dados daquele campo (sem edição simultânea "ao vivo").
 
 ## Identidade visual
 
