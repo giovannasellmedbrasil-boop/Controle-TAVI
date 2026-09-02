@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle TAVI — Sellmed Brasil</title>
+<link rel="icon" href="assets/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0C2F79;
+    --teal:#1EA4A8;
+    --green:#73CC6E;
+    --card-teal:#EAF6F6;
+    --bg:#FAFBFB;
+    --body-text:#5B6772;
+    --caption:#858683;
+    --red:#C94A4A;
+    --amber:#D6924B;
+    --border:#E3E8EA;
+    --white:#FFFFFF;
+    --gradient: linear-gradient(90deg, var(--navy) 0%, var(--teal) 50%, var(--green) 100%);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    font-family:'Inter',Calibri,Arial,sans-serif;
+    color:var(--body-text);
+  }
+  h1,h2,h3,.brand-font{font-family:'Montserrat',Arial,sans-serif;}
+  .accent-bar{height:6px;background:var(--gradient);}
+
+  header.topbar{
+    background:var(--white);
+    border-bottom:1px solid var(--border);
+    padding:18px 32px;
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  header.topbar img.logo{
+    height:64px;
+    width:auto;
+    display:block;
+  }
+  header.topbar .titles h1{
+    margin:0;
+    font-size:22px;
+    font-weight:800;
+    color:var(--navy);
+    letter-spacing:.2px;
+  }
+  header.topbar .titles p{
+    margin:2px 0 0;
+    font-size:13px;
+    color:var(--caption);
+    font-weight:600;
+    letter-spacing:.3px;
+    text-transform:uppercase;
+  }
+  header.topbar .spacer{flex:1;}
+  .btn{
+    border:none;
+    border-radius:8px;
+    padding:11px 18px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition:filter .15s ease, transform .05s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.15);}
+  .btn-teal{background:var(--teal);color:#fff;}
+  .btn-teal:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--navy);border:1px solid var(--border);}
+  .btn-ghost:hover{background:#F1F4F5;}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid #F0D3D3;}
+  .btn-danger:hover{background:#FDF2F2;}
+  .btn-sm{padding:7px 12px;font-size:12.5px;}
+
+  main{max-width:1400px;margin:0 auto;padding:28px 32px 60px;}
+
+  section.panel{
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:22px 24px;
+    margin-bottom:24px;
+    box-shadow:0 1px 3px rgba(12,47,121,.04);
+  }
+  section.panel h2{
+    margin:0 0 16px;
+    font-size:15px;
+    font-weight:700;
+    color:var(--navy);
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  section.panel h2::before{
+    content:"";
+    width:4px;
+    height:16px;
+    background:var(--gradient);
+    border-radius:2px;
+  }
+
+  .dash-grid{
+    display:grid;
+    grid-template-columns:1.1fr 1.6fr 1.3fr;
+    gap:20px;
+  }
+  @media (max-width:1100px){ .dash-grid{grid-template-columns:1fr;} }
+
+  .status-cards{display:flex;flex-direction:column;gap:10px;}
+  .status-card{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--card-teal);
+    border-radius:10px;
+    padding:12px 16px;
+  }
+  .status-card .label{font-size:13px;font-weight:600;color:var(--navy);}
+  .status-card .value{font-size:20px;font-weight:800;color:var(--navy);font-family:'Montserrat',sans-serif;}
+  .status-card.total{background:var(--navy);}
+  .status-card.total .label,.status-card.total .value{color:#fff;}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;}
+
+  table.matrix{width:100%;border-collapse:collapse;font-size:13px;}
+  table.matrix th,table.matrix td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);}
+  table.matrix th{background:var(--navy);color:#fff;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;}
+  table.matrix td:first-child,table.matrix th:first-child{text-align:left;}
+  table.matrix tr.total-row td{font-weight:800;color:var(--navy);background:var(--card-teal);}
+
+  .bars{display:flex;align-items:flex-end;gap:14px;height:180px;padding-top:10px;}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .bar-col .bar{
+    width:100%;
+    max-width:46px;
+    border-radius:6px 6px 0 0;
+    background:var(--gradient);
+    transition:height .4s ease;
+  }
+  .bar-col .bar-value{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+  .bar-col .bar-label{font-size:10.5px;color:var(--caption);margin-top:8px;text-align:center;line-height:1.3;}
+
+  .toolbar{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  .toolbar input[type=text], .toolbar select{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 12px;
+    font-size:13.5px;
+    font-family:'Inter',sans-serif;
+    color:var(--body-text);
+    background:#fff;
+  }
+  .toolbar input[type=text]{flex:1;min-width:200px;}
+  .toolbar .spacer{flex:1;}
+  .count-pill{
+    font-size:12.5px;
+    color:var(--caption);
+    font-weight:600;
+    white-space:nowrap;
+  }
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+  table.data{width:100%;border-collapse:collapse;font-size:13px;min-width:1150px;}
+  table.data thead th{
+    background:var(--navy);
+    color:#fff;
+    text-align:left;
+    padding:10px 12px;
+    font-weight:600;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    white-space:nowrap;
+    position:sticky;top:0;
+  }
+  table.data tbody td{
+    padding:10px 12px;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  table.data tbody tr:hover{background:#F7FBFB;cursor:pointer;}
+  table.data tbody tr:last-child td{border-bottom:none;}
+
+  .badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.2px;
+  }
+  .badge-realizado{background:#E4F5E3;color:#3C8A38;}
+  .badge-agendado{background:#E5EEFB;color:#2A5BA8;}
+  .badge-cancelado{background:#FBE6E6;color:#B33A3A;}
+  .badge-obito{background:#EDEDED;color:#4A4A4A;}
+  .badge-aguardando{background:#FCEFE0;color:#B4712A;}
+
+  .attach-icons{display:flex;gap:6px;}
+  .attach-icons span{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;height:22px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:700;
+    color:#fff;
+  }
+  .ic-rep{background:var(--teal);}
+  .ic-nf{background:var(--green);}
+  .ic-off{background:#DADFE1;color:#8B959B;}
+
+  .empty-state{padding:40px;text-align:center;color:var(--caption);font-size:14px;}
+
+  /* Modal */
+  .overlay{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(12,20,30,.45);
+    align-items:flex-start;
+    justify-content:center;
+    padding:40px 16px;
+    overflow-y:auto;
+    z-index:50;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:#fff;
+    border-radius:14px;
+    width:100%;
+    max-width:720px;
+    box-shadow:0 20px 60px rgba(12,47,121,.25);
+    overflow:hidden;
+  }
+  .modal-head{
+    background:var(--navy);
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .modal-head h3{margin:0;color:#fff;font-size:16px;font-weight:700;}
+  .modal-head button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;opacity:.85;}
+  .modal-head button:hover{opacity:1;}
+  .modal-body{padding:22px 24px;max-height:70vh;overflow-y:auto;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
+  .form-grid .full{grid-column:1/-1;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+  .field input[type=text], .field input[type=date], .field select{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:13.5px;
+    font-family:'Inter',sans-serif;
+    color:#2c3338;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--teal);outline-offset:1px;}
+
+  .attach-box{
+    border:1.5px dashed var(--border);
+    border-radius:10px;
+    padding:14px;
+    background:var(--card-teal);
+  }
+  .attach-box h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;}
+  .attach-current{font-size:12.5px;color:var(--body-text);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .attach-current a{color:var(--teal);font-weight:600;text-decoration:none;}
+  .attach-current a:hover{text-decoration:underline;}
+  .attach-box input[type=file]{font-size:12.5px;width:100%;}
+  .remove-link{color:var(--red);font-size:11.5px;cursor:pointer;font-weight:600;background:none;border:none;padding:0;}
+
+  .modal-foot{
+    padding:16px 24px;
+    border-top:1px solid var(--border);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  footer.appfoot{
+    text-align:center;
+    padding:24px;
+    font-size:11.5px;
+    color:var(--caption);
+  }
+
+  .toast{
+    position:fixed;
+    bottom:24px;left:50%;
+    transform:translateX(-50%);
+    background:var(--navy);
+    color:#fff;
+    padding:12px 20px;
+    border-radius:8px;
+    font-size:13.5px;
+    font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.2);
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .note{
+    font-size:11.5px;
+    color:var(--caption);
+    margin-top:10px;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="accent-bar"></div>
+<header class="topbar">
+  <img class="logo" src="assets/logo.svg" alt="Sellmed Brasil">
+  <div class="titles">
+    <h1>Controle de Procedimentos TAVI</h1>
+    <p>Venus A Pro &middot; Sellmed Brasil</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-primary" id="btnNovo">+ Novo Procedimento</button>
+</header>
+
+<main>
+
+  <section class="panel">
+    <h2>Dashboard</h2>
+    <div class="dash-grid">
+      <div>
+        <div class="status-cards" id="statusCards"></div>
+      </div>
+      <div>
+        <table class="matrix" id="matrixTable"></table>
+      </div>
+      <div>
+        <div class="bars" id="barsChart"></div>
+      </div>
+    </div>
+    <p class="note">Os indicadores são calculados automaticamente a partir da tabela de procedimentos abaixo — ao incluir, editar ou excluir um caso, o dashboard é atualizado na hora.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Base de Procedimentos</h2>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Buscar por paciente, cidade, hospital ou médico...">
+      <select id="filterStatus"><option value="">Todos os status</option></select>
+      <select id="filterRegiao"><option value="">Todas as regiões</option></select>
+      <span class="spacer"></span>
+      <span class="count-pill" id="countPill"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Paciente</th>
+            <th>Cidade</th>
+            <th>UF</th>
+            <th>Região</th>
+            <th>Hospital</th>
+            <th>Médico</th>
+            <th>Data</th>
+            <th>Status</th>
+            <th>Prótese</th>
+            <th>Responsável</th>
+            <th>Crimper / Especialista</th>
+            <th>Anexos</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="appfoot">Controle TAVI &middot; Sellmed Brasil &middot; dados salvos localmente neste navegador</footer>
+</main>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Novo Procedimento</h3>
+      <button id="btnClose" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="procForm">
+        <input type="hidden" id="f_id">
+        <div class="form-grid">
+          <div class="field full">
+            <label>Paciente</label>
+            <input type="text" id="f_paciente" required>
+          </div>
+          <div class="field">
+            <label>Cidade</label>
+            <input type="text" id="f_cidade" list="dl_cidade">
+            <datalist id="dl_cidade"></datalist>
+          </div>
+          <div class="field">
+            <label>UF</label>
+            <select id="f_uf"></select>
+          </div>
+          <div class="field">
+            <label>Região</label>
+            <select id="f_regiao">
+              <option value="Norte">Norte</option>
+              <option value="Nordeste">Nordeste</option>
+              <option value="Centro-Oeste">Centro-Oeste</option>
+              <option value="Sudeste">Sudeste</option>
+              <option value="Sul">Sul</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Hospital</label>
+            <input type="text" id="f_hospital" list="dl_hospital">
+            <datalist id="dl_hospital"></datalist>
+          </div>
+          <div class="field">
+            <label>Médico</label>
+            <input type="text" id="f_medico" list="dl_medico">
+            <datalist id="dl_medico"></datalist>
+          </div>
+          <div class="field">
+            <label>Data do procedimento</label>
+            <input type="date" id="f_data">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="f_status">
+              <option value="Realizado">Realizado</option>
+              <option value="Agendado">Agendado</option>
+              <option value="Cancelado">Cancelado</option>
+              <option value="Óbito">Óbito</option>
+              <option value="Aguardando agendamento">Aguardando agendamento</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Prótese</label>
+            <input type="text" id="f_protese" placeholder="ex: 26 ou 29">
+          </div>
+          <div class="field">
+            <label>Responsável</label>
+            <input type="text" id="f_responsavel" list="dl_responsavel">
+            <datalist id="dl_responsavel"></datalist>
+          </div>
+          <div class="field">
+            <label>Crimper / Especialista</label>
+            <input type="text" id="f_crimper" list="dl_crimper">
+            <datalist id="dl_crimper"></datalist>
+          </div>
+
+          <div class="field full attach-box">
+            <h4>Anexo — Reporte</h4>
+            <div class="attach-current" id="cur_reporte"></div>
+            <input type="file" id="f_reporte" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+          </div>
+          <div class="field full attach-box">
+            <h4>Anexo — Nota Fiscal</h4>
+            <div class="attach-current" id="cur_nf"></div>
+            <input type="file" id="f_nf" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger btn-sm" id="btnDelete" style="display:none;">Excluir procedimento</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+      <button class="btn btn-teal" id="btnSave" style="margin-left:10px;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LS_KEY = 'tavi_procedimentos_v1';
+  var STATUS_LIST = ['Realizado','Agendado','Cancelado','Óbito','Aguardando agendamento'];
+  var STATUS_CLASS = {
+    'Realizado':'badge-realizado','Agendado':'badge-agendado','Cancelado':'badge-cancelado',
+    'Óbito':'badge-obito','Aguardando agendamento':'badge-aguardando'
+  };
+  var STATUS_DOT = {
+    'Realizado':'#3C8A38','Agendado':'#2A5BA8','Cancelado':'#B33A3A',
+    'Óbito':'#4A4A4A','Aguardando agendamento':'#B4712A'
+  };
+  var REGIOES = ['Norte','Nordeste','Centro-Oeste','Sudeste','Sul'];
+  var UF_REGIAO = {
+    AC:'Norte',AP:'Norte',AM:'Norte',PA:'Norte',RO:'Norte',RR:'Norte',TO:'Norte',
+    AL:'Nordeste',BA:'Nordeste',CE:'Nordeste',MA:'Nordeste',PB:'Nordeste',PE:'Nordeste',PI:'Nordeste',RN:'Nordeste',SE:'Nordeste',
+    DF:'Centro-Oeste',GO:'Centro-Oeste',MT:'Centro-Oeste',MS:'Centro-Oeste',
+    ES:'Sudeste',MG:'Sudeste',RJ:'Sudeste',SP:'Sudeste',
+    PR:'Sul',RS:'Sul',SC:'Sul'
+  };
+
+  /* ---------- IndexedDB attachment storage ---------- */
+  var dbPromise = null;
+  function openDB(){
+    if(dbPromise) return dbPromise;
+    dbPromise = new Promise(function(resolve,reject){
+      if(!window.indexedDB){ reject('no-idb'); return; }
+      var req = indexedDB.open('tavi_anexos_db', 1);
+      req.onupgradeneeded = function(e){
+        e.target.result.createObjectStore('anexos', {keyPath:'id'});
+      };
+      req.onsuccess = function(e){ resolve(e.target.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+    return dbPromise;
+  }
+  function saveAttachmentFile(file){
+    return new Promise(function(resolve,reject){
+      if(!file){ resolve(null); return; }
+      var id = 'a_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      openDB().then(function(db){
+        var tx = db.transaction('anexos','readwrite');
+        tx.objectStore('anexos').put({id:id, name:file.name, type:file.type, blob:file});
+        tx.oncomplete = function(){ resolve({id:id, name:file.name, type:file.type}); };
+        tx.onerror = function(){ reject(tx.error); };
+      }).catch(reject);
+    });
+  }
+  function getAttachmentURL(id){
+    return new Promise(function(resolve,reject){
+      openDB().then(function(db){
+        var tx = db.transaction('anexos','readonly');
+        var req = tx.objectStore('anexos').get(id);
+        req.onsuccess = function(){
+          if(req.result && req.result.blob){
+            resolve(URL.createObjectURL(req.result.blob));
+          } else { resolve(null); }
+        };
+        req.onerror = function(){ reject(req.error); };
+      }).catch(reject);
+    });
+  }
+  function deleteAttachment(id){
+    if(!id) return;
+    openDB().then(function(db){
+      var tx = db.transaction('anexos','readwrite');
+      tx.objectStore('anexos').delete(id);
+    }).catch(function(){});
+  }
+
+  /* ---------- Data ---------- */
+  function loadData(){
+    var raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      try{ return JSON.parse(raw); }catch(e){ /* fall through to seed */ }
+    }
+    var seed = seedData();
+    localStorage.setItem(LS_KEY, JSON.stringify(seed));
+    return seed;
+  }
+  function saveData(){
+    localStorage.setItem(LS_KEY, JSON.stringify(procedimentos));
+  }
+
+  function rec(paciente,cidade,uf,hospital,medico,data,status,protese,responsavel,crimper){
+    return {
+      id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+      paciente:paciente, cidade:cidade||'', uf:uf||'', regiao: uf?(UF_REGIAO[uf]||''):'',
+      hospital:hospital||'', medico:medico||'', data:data||'', status:status||'Aguardando agendamento',
+      protese:protese||'', responsavel:responsavel||'', crimper:crimper||'',
+      anexoReporte:null, anexoNF:null, criadoEm:new Date().toISOString()
+    };
+  }
+
+  function seedData(){
+    var d = [];
+    d.push(rec('Jonas Freitas','Ji-Paraná','RO','HCR','Dr Francisco','2026-05-06','Realizado','29 ou 32','Eudes','Alice'));
+    d.push(rec('Yolanda Gomes','Ji-Paraná','RO','HCR','Dr Francisco','2026-05-06','Realizado','26 ou 23','Eudes','Alice'));
+    d.push(rec('Eduarda Pinto','Manaus','AM','Hapvida','Dr Anderson','2026-05-12','Realizado','26','Alice','Alice'));
+    d.push(rec('Manoel Braga','Manaus','AM','Hapvida','Dr Anderson','2026-05-12','Realizado','29','Alice','Alice'));
+    d.push(rec('Maria Aparecida Nunes','Ji-Paraná','RO','HCR','Dr Francisco','','Cancelado','','Eudes',''));
+    d.push(rec('Marili Bezerra','Maceió','AL','Hapvida','Dr Kleberth','2026-03-10','Realizado','26','',''));
+    d.push(rec('Valter Ferreira','Ribeirão Preto','SP','Hapvida','Dr Leon','2026-04-22','Realizado','29','',''));
+    d.push(rec('Florenilda Barbosa','Maceió','AL','Hapvida','Dr Kleberth','2026-06-08','Realizado','23 ou 26','Alice','Alice'));
+    d.push(rec('Julia Cosmos dos Santos','Aracaju','SE','SUS','Dr André','2026-06-12','Realizado','26 ou 23','Alice','Alice'));
+    d.push(rec('Edgio Teixeira Leal','Recife','PE','Osvaldo Magalhães','Dr Dinaldo','2026-06-15','Realizado','','Eudes/Carol','Alice'));
+    d.push(rec('Melicia do Carmo','Recife','PE','Agnaldo Magalhães','Dr Fabiano','2026-06-17','Realizado','32 ou 29','Eudes/Carol','Alice'));
+    d.push(rec('Revolucia Bezarra da Rocha','Aracaju','SE','HUSE','Dr Thiago','2026-07-17','Realizado','23 ou 26','Alice','Alice'));
+    d.push(rec('Raymundo Ribeiro França','Salvador','BA','Hapvida','Dr Neri','2026-08-27','Realizado','26 ou 29','Alice','Alice'));
+    d.push(rec('Jose Pereira','Aracaju','SE','AngioCor','Dr Allysson','2026-12-19','Realizado','29 ou 26','Alice','Alice'));
+    d.push(rec('Herminio Hilario de Araujo','Fortaleza','CE','Antonio Prudentre - Hapvida','Dr Milanez','2027-07-02','Realizado','32','Alice/Eudes','Alice'));
+    d.push(rec('Almir Gomes Rosendo','Natal','RN','Hospital do Coração','Dr Bruno','2026-08-31','Cancelado','32 ou 29','MedPrime',''));
+    d.push(rec('Ana Maria','Fortaleza','CE','Hapvida','Dr Hedilberto','','Aguardando agendamento','26 ou 29','Eudes',''));
+    d.push(rec('Evanilda Alves Rocha','Recife','PE','Esperança','Dr Alexandre Magni','','Cancelado','','Alice',''));
+    d.push(rec('Jose Florencio Lira','Recife','PE','','Dr Heitor Medeiros','','Aguardando agendamento','26 ou 29','Eudes',''));
+    d.push(rec('Jose Oderno de Oliveira','Fortaleza','CE','Antonio Prudentre - Hapvida','Dr Milanez','','Aguardando agendamento','26 ou 23','Alice',''));
+    d.push(rec('Maria da Penha','Recife','PE','Hapvida','Dr Fabiano','','Aguardando agendamento','23 ou 26','Eudes/Carol','Alice'));
+    d.push(rec('Maria da Conceição','Aracaju','SE','Hapvida','Dr Thiago','','Aguardando agendamento','','Alice','Alice'));
+    d.push(rec('Maria Edite Almeida','Recife','PE','Hapvida','Dr Fabiano','','Aguardando agendamento','29 ou 26','Eudes/Carol','Alice'));
+    d.push(rec('Maria Aparecida Viana','Mato Grosso do Sul','MS','HCI','Dr Atabi','2026-07-14','Realizado','26 ou 29','Dani','Alice'));
+    d.push(rec('José Alves Assis','São Paulo','SP','Paulo Sacramento','Dr Adriano','2026-05-19','Realizado','32 ou 29','Andreia/Ari','Alice'));
+    d.push(rec('Natalina Benenuto','Ribeirão Preto','SP','Hapvida','Dr Leon','2026-06-23','Cancelado','','Alice',''));
+    d.push(rec('Felipe Pascolim','Jundiaí','SP','Paulo Sacramento','Dr Adriano','2026-07-02','Realizado','32 ou 29','Ari/Andreia','Stephanie'));
+    d.push(rec('Alberto Monteiro','São Paulo','SP','Salvalos','Dr Adriano Truffa','2026-07-07','Realizado','29 ou 32','Andreia','Alice'));
+    d.push(rec('Pedro Pistori Filho','São Paulo','SP','Hapvida','Dr Adriano','2026-07-08','Realizado','26 ou 23','Andreia',''));
+    d.push(rec('Maria Aparecida Viana','São Paulo','SP','Hospital Vida','Dr Atabi','2026-07-14','Cancelado','29 ou 26','Dani','Alice'));
+    d.push(rec('Vicentina Aparecida','Jundiaí','SP','Paulo Sacramento','Dr Tarcio','2026-07-20','Cancelado','26 ou 23','Ari/Andreia',''));
+    d.push(rec('Braz Mendes','Jundiaí','SP','Paulo Sacramento','Dr Adriano','2026-07-21','Realizado','29 ou 32','Andreia/Ari','Stephanie'));
+    d.push(rec('Luzia Montanha','São Paulo','SP','São Bernardo','Dr Adriano','2026-07-21','Realizado','23','Andreia',''));
+    d.push(rec('Ivan Scotto','São Bernardo','SP','São Bernardo','Dr Adriano','2026-08-10','Realizado','29 ou 26','Andreia',''));
+    d.push(rec('Alzira Alberti Gorgonio','São Paulo','SP','Hospital Vida','Dr Lucas','','Cancelado','26 ou 29','Dani',''));
+    d.push(rec('Baltazar Prado','Ribeirão Preto','SP','HCI','Daniele Lopes','','Aguardando agendamento','26 ou 29','Dani',''));
+    d.push(rec('Carmem Lucia Fernandes','São Bernardo','SP','São Bernardo','Dr Adriano','','Realizado','26 ou 23','Andreia',''));
+    d.push(rec('Eliz Miziara','Barretos','SP','São Jorge','Dr Uebe','','Cancelado','','Dani',''));
+    d.push(rec('Elza Aparecida Melo','Marilia','SP','Unimar','Dr Ricardo','','Aguardando agendamento','26','Dani',''));
+    d.push(rec('Evaristo de Souza','Ribeirão Preto','SP','HCI','Dr Ricardo','','Aguardando agendamento','26 ou 29','Dani',''));
+    d.push(rec('Iracilda Alves Pereira','Bauru','SP','Unimed Bauru','Daniele','','Aguardando agendamento','','Dani',''));
+    d.push(rec('Marcio Luiz Alarcon','Bauru','SP','Unimed Bauru','Dr Antonio Germano','','Aguardando agendamento','','Dani',''));
+    d.push(rec('Marcio Rossi','Ribeirão Preto','SP','HCI','Ricardo Ferreira','','Aguardando agendamento','29 ou 26','Dani',''));
+    d.push(rec('Maria Aparecida Grilo','Ribeirão Preto','SP','HCI','Jose Luiz','','Aguardando agendamento','23','Dani',''));
+    d.push(rec('Maria Auxiliadora','São Paulo','SP','Salvalos','Dr Adriano','','Cancelado','26 ou 23','Andreia',''));
+    d.push(rec('Maria de Lourdes de Oliveira','','SP','Paulo Sacramento','Dr Adriano Truffa','','Aguardando agendamento','26 e 23','Andreia',''));
+    d.push(rec('Maria Socorro da Silva','Santos','SP','Ana Costa','Leonardo Barros','','Aguardando agendamento','','Dani',''));
+    d.push(rec('Miriam Vannuci','São Paulo','SP','','','','Aguardando agendamento','','Dani',''));
+    d.push(rec('Paulo Roberto Meira Leite','Bauru','SP','Unimed Bauru','Dr Luiz Roberto','','Cancelado','29 ou 32','Dani',''));
+    d.push(rec('Ricardo Tonso','São Paulo','SP','Hospital Vida','Dr Lucas','','Cancelado','29 ou 26','Dani',''));
+    d.push(rec('Valdir Dionisio Ribeiro','Ribeirão Preto','SP','Hapvida','Dr Leon','','Realizado','','',''));
+    d.push(rec('Virginia de Camargo Absy','São Paulo','SP','Salvalos','Dr Giovani','','Realizado','23 ou 26','Andreia','Alice e Ari'));
+    d.push(rec('William Sancini','São Paulo','SP','Hapvida','Dr Marcelo','','Cancelado','','Alice/Andreia',''));
+    d.push(rec('Arthur Antonio','Guarapuava','PR','Cancer Center','Dr Stefan Negrão','2026-07-04','Realizado','32','Dani','Alice'));
+    d.push(rec('Neuza Aparecida Antonio','São Paulo','SP','Bauru','Dr Antonio Germano','','Aguardando agendamento','','',''));
+    d.push(rec('Maria Valdenice','São Paulo','SP','Matao','Dr Said','','Aguardando agendamento','','',''));
+    return d;
+  }
+
+  var procedimentos = loadData();
+
+  /* ---------- helpers ---------- */
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return (s||'').toString().replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  }); }
+  function fmtDate(iso){
+    if(!iso) return '';
+    var p = iso.split('-');
+    if(p.length!==3) return iso;
+    return p[2]+'/'+p[1]+'/'+p[0];
+  }
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  /* ---------- UF select fill ---------- */
+  (function fillUF(){
+    var sel = $('f_uf');
+    var opt0 = document.createElement('option');
+    opt0.value=''; opt0.textContent='—';
+    sel.appendChild(opt0);
+    Object.keys(UF_REGIAO).sort().forEach(function(uf){
+      var o = document.createElement('option');
+      o.value = uf; o.textContent = uf;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', function(){
+      if(sel.value && UF_REGIAO[sel.value]){
+        $('f_regiao').value = UF_REGIAO[sel.value];
+      }
+    });
+  })();
+
+  /* ---------- filters select fill ---------- */
+  (function fillFilters(){
+    var st = $('filterStatus');
+    STATUS_LIST.forEach(function(s){
+      var o = document.createElement('option'); o.value=s; o.textContent=s; st.appendChild(o);
+    });
+    var rg = $('filterRegiao');
+    REGIOES.forEach(function(r){
+      var o = document.createElement('option'); o.value=r; o.textContent=r; rg.appendChild(o);
+    });
+  })();
+
+  function uniqueValues(field){
+    var set = {};
+    procedimentos.forEach(function(p){ if(p[field]) set[p[field]] = true; });
+    return Object.keys(set).sort();
+  }
+  function fillDatalist(id, field){
+    var dl = $(id);
+    dl.innerHTML = '';
+    uniqueValues(field).forEach(function(v){
+      var o = document.createElement('option'); o.value = v; dl.appendChild(o);
+    });
+  }
+  function refreshDatalists(){
+    fillDatalist('dl_cidade','cidade');
+    fillDatalist('dl_hospital','hospital');
+    fillDatalist('dl_medico','medico');
+    fillDatalist('dl_responsavel','responsavel');
+    fillDatalist('dl_crimper','crimper');
+  }
+
+  /* ---------- Dashboard render ---------- */
+  function renderDashboard(list){
+    var counts = {}; STATUS_LIST.forEach(function(s){ counts[s]=0; });
+    var matrix = {}; REGIOES.forEach(function(r){ matrix[r]={}; STATUS_LIST.forEach(function(s){ matrix[r][s]=0; }); });
+
+    list.forEach(function(p){
+      if(counts[p.status]!==undefined) counts[p.status]++;
+      var r = p.regiao;
+      if(r && matrix[r]){
+        if(matrix[r][p.status]!==undefined) matrix[r][p.status]++;
+      }
+    });
+
+    // status cards
+    var cardsHtml = '';
+    STATUS_LIST.forEach(function(s){
+      cardsHtml += '<div class="status-card"><span class="label"><span class="dot" style="background:'+STATUS_DOT[s]+'"></span>'+esc(s)+'</span><span class="value">'+counts[s]+'</span></div>';
+    });
+    cardsHtml += '<div class="status-card total"><span class="label">TOTAL</span><span class="value">'+list.length+'</span></div>';
+    $('statusCards').innerHTML = cardsHtml;
+
+    // matrix table
+    var head = '<tr><th>Região</th>';
+    STATUS_LIST.forEach(function(s){ head += '<th>'+esc(s.split(' ')[0])+'</th>'; });
+    head += '<th>Total</th></tr>';
+    var body = '';
+    var colTotals = {}; STATUS_LIST.forEach(function(s){ colTotals[s]=0; });
+    REGIOES.forEach(function(r){
+      var rowTotal = 0;
+      body += '<tr><td>'+r+'</td>';
+      STATUS_LIST.forEach(function(s){
+        var v = matrix[r][s];
+        rowTotal += v; colTotals[s]+=v;
+        body += '<td>'+v+'</td>';
+      });
+      body += '<td><strong>'+rowTotal+'</strong></td></tr>';
+    });
+    var grand = 0;
+    body += '<tr class="total-row"><td>TOTAL</td>';
+    STATUS_LIST.forEach(function(s){ grand += colTotals[s]; body += '<td>'+colTotals[s]+'</td>'; });
+    body += '<td>'+grand+'</td></tr>';
+    $('matrixTable').innerHTML = head+body;
+
+    // bar chart
+    var max = Math.max.apply(null, STATUS_LIST.map(function(s){ return counts[s]; }).concat([1]));
+    var barsHtml = '';
+    STATUS_LIST.forEach(function(s){
+      var h = Math.round((counts[s]/max)*140);
+      barsHtml += '<div class="bar-col"><div class="bar-value">'+counts[s]+'</div><div class="bar" style="height:'+Math.max(h,2)+'px"></div><div class="bar-label">'+esc(s)+'</div></div>';
+    });
+    $('barsChart').innerHTML = barsHtml;
+  }
+
+  /* ---------- Table render ---------- */
+  function getFiltered(){
+    var q = $('search').value.trim().toLowerCase();
+    var st = $('filterStatus').value;
+    var rg = $('filterRegiao').value;
+    return procedimentos.filter(function(p){
+      if(st && p.status!==st) return false;
+      if(rg && p.regiao!==rg) return false;
+      if(q){
+        var hay = [p.paciente,p.cidade,p.hospital,p.medico,p.uf].join(' ').toLowerCase();
+        if(hay.indexOf(q)===-1) return false;
+      }
+      return true;
+    });
+  }
+
+  function attachIconsHtml(p){
+    var repClass = p.anexoReporte ? 'ic-rep' : 'ic-off';
+    var nfClass = p.anexoNF ? 'ic-nf' : 'ic-off';
+    return '<span class="attach-icons">'+
+      '<span class="'+repClass+'" title="'+(p.anexoReporte?'Reporte anexado':'Sem reporte')+'">R</span>'+
+      '<span class="'+nfClass+'" title="'+(p.anexoNF?'Nota fiscal anexada':'Sem nota fiscal')+'">NF</span>'+
+      '</span>';
+  }
+
+  function renderTable(){
+    var list = getFiltered();
+    renderDashboard(procedimentos);
+
+    $('countPill').textContent = list.length + ' de ' + procedimentos.length + ' procedimentos';
+
+    if(list.length===0){
+      $('tableBody').innerHTML = '<tr><td colspan="12"><div class="empty-state">Nenhum procedimento encontrado.</div></td></tr>';
+      return;
+    }
+
+    var rows = list.map(function(p){
+      var badgeClass = STATUS_CLASS[p.status] || 'badge-aguardando';
+      return '<tr data-id="'+p.id+'">'+
+        '<td><strong>'+esc(p.paciente)+'</strong></td>'+
+        '<td>'+esc(p.cidade)+'</td>'+
+        '<td>'+esc(p.uf)+'</td>'+
+        '<td>'+esc(p.regiao)+'</td>'+
+        '<td>'+esc(p.hospital)+'</td>'+
+        '<td>'+esc(p.medico)+'</td>'+
+        '<td>'+fmtDate(p.data)+'</td>'+
+        '<td><span class="badge '+badgeClass+'">'+esc(p.status)+'</span></td>'+
+        '<td>'+esc(p.protese)+'</td>'+
+        '<td>'+esc(p.responsavel)+'</td>'+
+        '<td>'+esc(p.crimper)+'</td>'+
+        '<td>'+attachIconsHtml(p)+'</td>'+
+        '</tr>';
+    }).join('');
+    $('tableBody').innerHTML = rows;
+
+    Array.prototype.forEach.call($('tableBody').querySelectorAll('tr'), function(tr){
+      tr.addEventListener('click', function(){
+        openModal(tr.getAttribute('data-id'));
+      });
+    });
+  }
+
+  /* ---------- Modal ---------- */
+  var currentEditId = null;
+
+  function clearForm(){
+    $('procForm').reset();
+    $('f_id').value = '';
+    $('f_regiao').value = 'Norte';
+    $('f_status').value = 'Aguardando agendamento';
+    $('cur_reporte').innerHTML = '';
+    $('cur_nf').innerHTML = '';
+    $('f_reporte').value = '';
+    $('f_nf').value = '';
+  }
+
+  function renderCurrentAttachment(containerId, att, onRemove){
+    var el = $(containerId);
+    el.innerHTML = '';
+    if(!att){
+      var span = document.createElement('span');
+      span.style.color = '#9aa3a8';
+      span.textContent = 'Nenhum arquivo anexado';
+      el.appendChild(span);
+      return;
+    }
+    var link = document.createElement('a');
+    link.href = '#'; link.textContent = '📎 '+att.name;
+    link.addEventListener('click', function(ev){
+      ev.preventDefault();
+      getAttachmentURL(att.id).then(function(url){
+        if(url) window.open(url,'_blank'); else toast('Não foi possível abrir o anexo.');
+      });
+    });
+    var rm = document.createElement('button');
+    rm.type='button'; rm.className='remove-link'; rm.textContent='remover';
+    rm.addEventListener('click', onRemove);
+    el.appendChild(link);
+    el.appendChild(rm);
+  }
+
+  function openModal(id){
+    clearForm();
+    currentEditId = id || null;
+    if(id){
+      var p = procedimentos.find(function(x){ return x.id===id; });
+      if(!p) return;
+      $('modalTitle').textContent = 'Editar Procedimento';
+      $('btnDelete').style.display = 'inline-block';
+      $('f_id').value = p.id;
+      $('f_paciente').value = p.paciente;
+      $('f_cidade').value = p.cidade;
+      $('f_uf').value = p.uf;
+      $('f_regiao').value = p.regiao || 'Norte';
+      $('f_hospital').value = p.hospital;
+      $('f_medico').value = p.medico;
+      $('f_data').value = p.data;
+      $('f_status').value = p.status;
+      $('f_protese').value = p.protese;
+      $('f_responsavel').value = p.responsavel;
+      $('f_crimper').value = p.crimper;
+
+      renderCurrentAttachment('cur_reporte', p.anexoReporte, function(){
+        deleteAttachment(p.anexoReporte.id);
+        p.anexoReporte = null;
+        saveData();
+        renderCurrentAttachment('cur_reporte', null);
+        renderTable();
+        toast('Anexo de reporte removido.');
+      });
+      renderCurrentAttachment('cur_nf', p.anexoNF, function(){
+        deleteAttachment(p.anexoNF.id);
+        p.anexoNF = null;
+        saveData();
+        renderCurrentAttachment('cur_nf', null);
+        renderTable();
+        toast('Anexo de nota fiscal removido.');
+      });
+    } else {
+      $('modalTitle').textContent = 'Novo Procedimento';
+      $('btnDelete').style.display = 'none';
+      renderCurrentAttachment('cur_reporte', null);
+      renderCurrentAttachment('cur_nf', null);
+    }
+    refreshDatalists();
+    $('overlay').classList.add('open');
+  }
+
+  function closeModal(){
+    $('overlay').classList.remove('open');
+    currentEditId = null;
+  }
+
+  function saveForm(){
+    var paciente = $('f_paciente').value.trim();
+    if(!paciente){ toast('Informe o nome do paciente.'); $('f_paciente').focus(); return; }
+
+    var id = $('f_id').value;
+    var isNew = !id;
+    var p = isNew ? rec('') : procedimentos.find(function(x){ return x.id===id; });
+    if(!p){ closeModal(); return; }
+
+    p.paciente = paciente;
+    p.cidade = $('f_cidade').value.trim();
+    p.uf = $('f_uf').value;
+    p.regiao = $('f_regiao').value;
+    p.hospital = $('f_hospital').value.trim();
+    p.medico = $('f_medico').value.trim();
+    p.data = $('f_data').value;
+    p.status = $('f_status').value;
+    p.protese = $('f_protese').value.trim();
+    p.responsavel = $('f_responsavel').value.trim();
+    p.crimper = $('f_crimper').value.trim();
+
+    var repFile = $('f_reporte').files[0];
+    var nfFile = $('f_nf').files[0];
+
+    var jobs = [];
+    if(repFile){
+      jobs.push(saveAttachmentFile(repFile).then(function(att){
+        if(p.anexoReporte) deleteAttachment(p.anexoReporte.id);
+        p.anexoReporte = att;
+      }));
+    }
+    if(nfFile){
+      jobs.push(saveAttachmentFile(nfFile).then(function(att){
+        if(p.anexoNF) deleteAttachment(p.anexoNF.id);
+        p.anexoNF = att;
+      }));
+    }
+
+    Promise.all(jobs).then(function(){
+      if(isNew) procedimentos.push(p);
+      saveData();
+      renderTable();
+      closeModal();
+      toast(isNew ? 'Procedimento adicionado.' : 'Procedimento atualizado.');
+    }).catch(function(err){
+      console.error(err);
+      toast('Não foi possível salvar o anexo neste navegador.');
+      if(isNew) procedimentos.push(p);
+      saveData();
+      renderTable();
+      closeModal();
+    });
+  }
+
+  function deleteCurrent(){
+    if(!currentEditId) return;
+    var p = procedimentos.find(function(x){ return x.id===currentEditId; });
+    if(!p) return;
+    if(!confirm('Excluir o procedimento de "'+p.paciente+'"? Esta ação não pode ser desfeita.')) return;
+    if(p.anexoReporte) deleteAttachment(p.anexoReporte.id);
+    if(p.anexoNF) deleteAttachment(p.anexoNF.id);
+    procedimentos = procedimentos.filter(function(x){ return x.id!==currentEditId; });
+    saveData();
+    renderTable();
+    closeModal();
+    toast('Procedimento excluído.');
+  }
+
+  /* ---------- events ---------- */
+  $('btnNovo').addEventListener('click', function(){ openModal(null); });
+  $('btnClose').addEventListener('click', closeModal);
+  $('btnCancel').addEventListener('click', closeModal);
+  $('btnSave').addEventListener('click', function(e){ e.preventDefault(); saveForm(); });
+  $('btnDelete').addEventListener('click', deleteCurrent);
+  $('overlay').addEventListener('click', function(e){ if(e.target.id==='overlay') closeModal(); });
+  $('search').addEventListener('input', renderTable);
+  $('filterStatus').addEventListener('change', renderTable);
+  $('filterRegiao').addEventListener('change', renderTable);
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape') closeModal();
+  });
+
+  /* ---------- init ---------- */
+  renderTable();
+  refreshDatalists();
+
+})();
+</script>
+</body>
+</html>
