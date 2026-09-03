@@ -327,10 +327,74 @@
     margin-top:10px;
     line-height:1.5;
   }
+
+  /* Login screen */
+  .login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(12,47,121,.12);
+    padding:36px 34px;
+    width:100%;
+    max-width:380px;
+    text-align:center;
+  }
+  .login-card img.login-logo{height:56px;width:auto;margin-bottom:18px;}
+  .login-card h1{margin:0 0 4px;font-size:19px;font-weight:800;color:var(--navy);}
+  .login-card p{margin:0 0 22px;font-size:13px;color:var(--caption);}
+  .login-card form{text-align:left;display:flex;flex-direction:column;gap:14px;}
+  .login-card label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+  .login-card input{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .login-card input:focus{outline:2px solid var(--teal);outline-offset:1px;}
+  .login-error{
+    font-size:12.5px;
+    color:var(--red);
+    min-height:16px;
+    font-weight:600;
+  }
+
+  /* Viewer role restrictions */
+  body.role-viewer .attach-box input[type=file]{display:none;}
+  body.role-viewer .attach-box h4::after{content:" (somente leitura)";font-weight:500;text-transform:none;letter-spacing:0;color:var(--caption);}
 </style>
 </head>
 <body>
 
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <img class="login-logo" src="assets/logo.svg" alt="Sellmed Brasil">
+    <h1>Controle TAVI</h1>
+    <p>Entre com seu e-mail e senha para continuar.</p>
+    <form id="loginForm">
+      <div>
+        <label>E-mail</label>
+        <input type="email" id="login_email" autocomplete="username" required>
+      </div>
+      <div>
+        <label>Senha</label>
+        <input type="password" id="login_password" autocomplete="current-password" required>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button class="btn btn-primary" type="submit" id="btnLogin" style="width:100%;">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
 <div class="accent-bar"></div>
 <header class="topbar">
   <img class="logo" src="assets/logo.svg" alt="Sellmed Brasil">
@@ -339,8 +403,10 @@
     <p>Venus A Pro &middot; Sellmed Brasil</p>
   </div>
   <div class="spacer"></div>
+  <span class="count-pill" id="userBadge" style="margin-right:4px;"></span>
   <span class="count-pill" id="syncStatus" style="margin-right:4px;">Carregando…</span>
   <button class="btn btn-primary" id="btnNovo">+ Novo Procedimento</button>
+  <button class="btn btn-ghost btn-sm" id="btnLogout">Sair</button>
 </header>
 
 <main>
@@ -395,6 +461,7 @@
 
   <footer class="appfoot">Controle TAVI &middot; Sellmed Brasil &middot; dados sincronizados via Supabase</footer>
 </main>
+</div>
 
 <!-- Modal -->
 <div class="overlay" id="overlay">
@@ -533,8 +600,10 @@
     });
   }
   function getAttachmentURL(path){
-    var res = sb.storage.from(ANEXOS_BUCKET).getPublicUrl(path);
-    return res.data ? res.data.publicUrl : null;
+    return sb.storage.from(ANEXOS_BUCKET).createSignedUrl(path, 120).then(function(res){
+      if(res.error) throw res.error;
+      return res.data.signedUrl;
+    });
   }
   function deleteAttachment(path){
     if(!path) return;
@@ -719,7 +788,7 @@
     var barsHtml = '';
     STATUS_LIST.forEach(function(s){
       var h = Math.round((counts[s]/max)*140);
-      barsHtml += '<div class="bar-col"><div class="bar-value">'+counts[s]+'</div><div class="bar" style="height:'+Math.max(h,2)+'px"></div><div class="bar-label">'+esc(s)+'</div></div>';
+      barsHtml += '<div class="bar-col"><div class="bar-value">'+counts[s]+'</div><div class="bar" style="height:'+Math.max(h,2)+'px;background:'+STATUS_DOT[s]+'"></div><div class="bar-label">'+esc(s)+'</div></div>';
     });
     $('barsChart').innerHTML = barsHtml;
   }
@@ -814,24 +883,31 @@
     link.href = '#'; link.textContent = '📎 '+att.name;
     link.addEventListener('click', function(ev){
       ev.preventDefault();
-      var url = getAttachmentURL(att.path);
-      if(url) window.open(url,'_blank'); else toast('Não foi possível abrir o anexo.');
+      getAttachmentURL(att.path).then(function(url){
+        if(url) window.open(url,'_blank'); else toast('Não foi possível abrir o anexo.');
+      }).catch(function(){
+        toast('Não foi possível abrir o anexo.');
+      });
     });
-    var rm = document.createElement('button');
-    rm.type='button'; rm.className='remove-link'; rm.textContent='remover';
-    rm.addEventListener('click', onRemove);
     el.appendChild(link);
-    el.appendChild(rm);
+    if(onRemove){
+      var rm = document.createElement('button');
+      rm.type='button'; rm.className='remove-link'; rm.textContent='remover';
+      rm.addEventListener('click', onRemove);
+      el.appendChild(rm);
+    }
   }
 
   function openModal(id){
+    var isAdmin = currentUser && currentUser.role === 'admin';
+    if(!id && !isAdmin) return;
     clearForm();
     currentEditId = id || null;
     if(id){
       var p = procedimentos.find(function(x){ return x.id===id; });
       if(!p) return;
-      $('modalTitle').textContent = 'Editar Procedimento';
-      $('btnDelete').style.display = 'inline-block';
+      $('modalTitle').textContent = isAdmin ? 'Editar Procedimento' : 'Detalhes do Procedimento';
+      $('btnDelete').style.display = isAdmin ? 'inline-block' : 'none';
       $('f_id').value = p.id;
       $('f_paciente').value = p.paciente;
       $('f_cidade').value = p.cidade;
@@ -845,7 +921,7 @@
       $('f_responsavel').value = p.responsavel;
       $('f_crimper').value = p.crimper;
 
-      renderCurrentAttachment('cur_reporte', p.anexoReporte, function(){
+      renderCurrentAttachment('cur_reporte', p.anexoReporte, !isAdmin ? null : function(){
         var oldPath = p.anexoReporte.path;
         sb.from('procedimentos').update({anexo_reporte_path:null, anexo_reporte_nome:null}).eq('id', p.id).then(function(res){
           if(res.error){ toast('Não foi possível remover o anexo.'); return; }
@@ -857,7 +933,7 @@
           toast('Anexo de reporte removido.');
         });
       });
-      renderCurrentAttachment('cur_nf', p.anexoNF, function(){
+      renderCurrentAttachment('cur_nf', p.anexoNF, !isAdmin ? null : function(){
         var oldPath = p.anexoNF.path;
         sb.from('procedimentos').update({anexo_nf_path:null, anexo_nf_nome:null}).eq('id', p.id).then(function(res){
           if(res.error){ toast('Não foi possível remover o anexo.'); return; }
@@ -875,6 +951,12 @@
       renderCurrentAttachment('cur_reporte', null);
       renderCurrentAttachment('cur_nf', null);
     }
+
+    Array.prototype.forEach.call($('procForm').querySelectorAll('input, select'), function(el){
+      el.disabled = !isAdmin;
+    });
+    $('btnSave').style.display = isAdmin ? '' : 'none';
+
     refreshDatalists();
     $('overlay').classList.add('open');
   }
@@ -972,6 +1054,57 @@
     });
   }
 
+  /* ---------- Autenticação (login/logout, papéis) ---------- */
+  var currentUser = null; // {email, role}
+
+  function roleFromUser(user){
+    return (user && user.app_metadata && user.app_metadata.role) || 'viewer';
+  }
+
+  function applyRoleUI(){
+    var isAdmin = currentUser && currentUser.role === 'admin';
+    document.body.classList.toggle('role-viewer', !isAdmin);
+    $('btnNovo').style.display = isAdmin ? '' : 'none';
+    $('userBadge').textContent = currentUser ? (currentUser.email + ' · ' + (isAdmin ? 'Edição' : 'Visualização')) : '';
+  }
+
+  function showApp(){
+    $('loginScreen').style.display = 'none';
+    $('appRoot').style.display = '';
+    applyRoleUI();
+    fetchAll().then(function(){
+      renderTable();
+      refreshDatalists();
+    });
+  }
+
+  function showLogin(){
+    $('appRoot').style.display = 'none';
+    $('loginScreen').style.display = 'flex';
+    currentUser = null;
+  }
+
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var email = $('login_email').value.trim();
+    var password = $('login_password').value;
+    $('btnLogin').disabled = true;
+    $('loginError').textContent = '';
+    sb.auth.signInWithPassword({email:email, password:password}).then(function(res){
+      if(res.error) throw res.error;
+      currentUser = {email: res.data.user.email, role: roleFromUser(res.data.user)};
+      showApp();
+    }).catch(function(){
+      $('loginError').textContent = 'E-mail ou senha inválidos.';
+    }).finally(function(){
+      $('btnLogin').disabled = false;
+    });
+  });
+
+  $('btnLogout').addEventListener('click', function(){
+    sb.auth.signOut().then(function(){ showLogin(); });
+  });
+
   /* ---------- events ---------- */
   $('btnNovo').addEventListener('click', function(){ openModal(null); });
   $('btnClose').addEventListener('click', closeModal);
@@ -988,9 +1121,16 @@
   });
 
   /* ---------- init ---------- */
-  fetchAll().then(function(){
-    renderTable();
-    refreshDatalists();
+  sb.auth.getSession().then(function(res){
+    var session = res.data && res.data.session;
+    if(session && session.user){
+      currentUser = {email: session.user.email, role: roleFromUser(session.user)};
+      showApp();
+    } else {
+      showLogin();
+    }
+  }).catch(function(){
+    showLogin();
   });
 
 })();
